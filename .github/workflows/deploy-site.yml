@@ -65,9 +65,16 @@ jobs:
           SITE_BASE: ${{ steps.pages.outputs.base_path }}
 
       # The build already refuses to emit a page whose in-page anchors do not
-      # resolve, but it cannot know what a correct deployment looks like. These
-      # are the five files the published site needs, and the stylesheet URL is
-      # the one thing that silently breaks a project site under /<repo>/.
+      # resolve, and it now refuses one whose root-relative URLs lead nowhere.
+      # What only this step can say is what a *correct* deployment looks like:
+      # these are the five files the published site needs.
+      #
+      # The stylesheet URL is read back out of the artifact instead of being
+      # re-derived from the Pages base path. Grepping for the interpolated
+      # `${SITE_BASE}assets/site.css` was self-fulfilling: with `base_path=/cv`
+      # it matched the glued `/cvassets/site.css`, so the deploy that shipped an
+      # unstyled site passed green. Only a check that never consults that value
+      # can disagree with it, so the URL is now judged on its own shape.
       - name: Verify artifact
         env:
           SITE_BASE: ${{ steps.pages.outputs.base_path }}
@@ -77,7 +84,25 @@ jobs:
           test -f dist/404.html
           test -f dist/assets/site.css
           test -f dist/.nojekyll
-          grep -q "href=\"${SITE_BASE}assets/site.css\"" dist/index.html
+          href=$(sed -n 's|.*<link rel="stylesheet" href="\([^"]*\)".*|\1|p' dist/index.html | head -n 1)
+          if [ -z "$href" ]; then
+            echo '::error::dist/index.html links no stylesheet'
+            exit 1
+          fi
+          # A URL whose base lost its trailing slash has no separate /assets/
+          # segment, so this rejects /cvassets/site.css while still accepting
+          # /assets/site.css on a deployment mounted at the root.
+          case "$href" in
+            */assets/site.css) ;;
+            *) echo "::error::$href is not mounted under a deployment base"; exit 1 ;;
+          esac
+          # `dist/` is published *at* the base, so the base is a URL prefix and
+          # not a directory: /cv/assets/site.css is dist/assets/site.css.
+          mount=${SITE_BASE%/}
+          if [ ! -f "dist${href#"$mount"}" ]; then
+            echo "::error::dist${href#"$mount"} does not exist, so $href would 404 on Pages"
+            exit 1
+          fi
 
       - uses: actions/upload-pages-artifact@v4
         with:

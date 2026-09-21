@@ -10,11 +10,16 @@ import { fileURLToPath } from 'node:url'
  * the default mounts the site under `/cv/`. `SITE_BASE=/` publishes to a domain
  * root or to a `https://<user>.github.io/` user site instead.
  *
+ * `actions/configure-pages` emits the base path WITHOUT a trailing slash. We
+ * normalize it here (`.replace(/\/?$/, '/')`) so every emitted URL has exactly
+ * one leading and one trailing slash. `src/site/site.ts` expects this invariant
+ * and builds all links accordingly.
+ *
  * This is the only place the base is written down: Vite turns it into
  * `import.meta.env.BASE_URL`, which `src/site/site.ts` reads to build every link,
  * so the stylesheet URLs and the generated markup cannot drift apart.
  */
-const base = process.env.SITE_BASE ?? '/cv/'
+const base = (process.env.SITE_BASE ?? '/cv/').replace(/\/?$/, '/')
 
 export default defineConfig({
   base,
