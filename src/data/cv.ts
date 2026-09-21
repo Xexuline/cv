@@ -202,9 +202,9 @@ const es: CvContent = {
   title: 'Ingeniero Front-End y Móvil Senior | Freelance',
   tagline: 'Creo experiencias accesibles y bien cuidadas para web y móvil.',
   about: [
-    '¡Hola! Soy Jesús y me gusta construir cosas. Soy ingeniero senior de front-end y móvil con más de una década creando interfaces de usuario accesibles y bien testeadas para plataformas web y móviles. Cuido esos pequeños detalles que separan un buen producto de uno excepcional, y trabajo mejor en la intersección entre diseño e ingeniería, donde la experiencia de usuario bien pensada se encuentra con un código limpio y escalable.',
-    'Empecé en el back-end con Java y Oracle, lo que me dio una base sólida de cómo funcionan los productos de punta a punta y un sano respeto por las personas que hay detrás de las APIs. Desde entonces he publicado aplicaciones web empresariales con Angular, React y Next.js en One Beyond, The Cocktail y Grupo ONCE, donde desarrollé por primera vez aplicaciones accesibles alineadas con WCAG para personas con discapacidad visual u otra.',
-    'Hoy trabajo como freelance, con la arquitectura de front-end de principio a fin: portales en React y TypeScript construidos con TanStack, aplicaciones en React Native con Expo y una cultura de testing muy firme con Cypress, Playwright y Jest. Me importan mucho la accesibilidad, el rendimiento y la calidad del código, y disfruto acompañando a otros desarrolladores en su crecimiento.',
+    '¡Hola! Soy Jesús y me gusta construir cosas. Soy ingeniero senior de front-end y móvil con más de una década creando interfaces de usuario accesibles y bien probadas para plataformas web y móviles. Cuido esos pequeños detalles que separan un buen producto de uno excepcional, y trabajo mejor en la intersección entre diseño e ingeniería, donde la experiencia de usuario bien pensada se encuentra con un código limpio y escalable.',
+    'Empecé en el back-end con Java y Oracle, lo que me dio una base sólida de cómo funcionan los productos de punta a punta y un sano respeto por las personas que hay detrás de las APIs. Desde entonces he publicado aplicaciones web empresariales con Angular, React y Next.js en One Beyond, The Cocktail y Grupo ONCE, donde desarrollé por primera vez aplicaciones accesibles conforme a WCAG, para personas con discapacidad visual o de otro tipo.',
+    'Hoy trabajo como freelance: llevo la arquitectura de front-end de principio a fin, con portales en React y TypeScript sobre TanStack, aplicaciones en React Native con Expo y una cultura de testing sólida con Cypress, Playwright y Jest. Me importan mucho la accesibilidad, el rendimiento y la calidad del código, y disfruto ayudando a otros desarrolladores a crecer.',
   ],
   contact: {
     intro: 'Ahora mismo estoy disponible para proyectos freelance y nuevas oportunidades. Si quieres charlar, mi bandeja de entrada está siempre abierta.',
@@ -265,7 +265,7 @@ const es: CvContent = {
       product: 'holiday.com (portal.holiday.com)',
       details: [
         'Desarrollo de la app móvil y del portal de usuario de holiday.com, con una migración en curso a XVmobile. Trabajé en un equipo de tres desarrolladores de front-end y tres de back-end.',
-        'Construí el portal de usuario desde cero como único ingeniero de front-end, asumiendo su arquitectura y trabajando codo a codo con un desarrollador de back-end. Usé React, TypeScript, TanStack y Tailwind CSS, con un stack elegido en conjunto entre los equipos.',
+        'Construí el portal de usuario desde cero como único ingeniero de front-end: diseñé su arquitectura y trabajé mano a mano con un desarrollador de back-end. Usé React, TypeScript, TanStack y Tailwind CSS, con un stack que eligimos entre los equipos.',
         'Desarrollé funcionalidades en la app móvil existente con React Native, Expo, TypeScript y NativeWind; ayudé a entregar la app rediseñada en menos de un mes.',
         'Colaboré en las integraciones nativas con Swift y Kotlin para iniciar sesión automáticamente al reabrir la app, a partir de la sesión anterior del usuario.',
         'Implementé en solitario la gestión del modo sin conexión y migré los assets estáticos a una red de distribución de contenido (CDN).',
@@ -289,11 +289,11 @@ const es: CvContent = {
     {
       role: 'Desarrollador Front-End',
       company: 'The Cocktail',
-      period: 'Dec 2018 - Jun 2021',
+      period: 'dic 2018 - jun 2021',
       location: 'Málaga, España',
       details: [
         'Construí y optimicé aplicaciones web empresariales con React, Vue.js, Redux y Vuex.',
-        'Implementé interfaces accesibles y responsivas alineadas con las guías de diseño, e integré APIs REST.',
+        'Implementé interfaces accesibles y responsivas siguiendo las guías de diseño, e integré APIs REST.',
         'Participé en la planificación de sprints, la estimación y las retrospectivas dentro de equipos Scrum Agile.',
       ],
       tech: ['React', 'Vue.js', 'Redux', 'Vuex', 'TypeScript', 'APIs REST'],
@@ -301,10 +301,10 @@ const es: CvContent = {
     {
       role: 'Desarrollador Front-End',
       company: 'Grupo ONCE',
-      period: 'Aug 2017 - Dec 2018',
+      period: 'ago 2017 - dic 2018',
       location: 'Málaga, España',
       details: [
-        'Desarrollé aplicaciones accesibles alineadas con los estándares WCAG, orientadas a personas con discapacidad visual u otra.',
+        'Desarrollé aplicaciones accesibles conforme a los estándares WCAG, orientadas a personas con discapacidad visual o de otro tipo.',
         'Construí interfaces responsivas con Angular 5, Bootstrap y SCSS, e integré APIs REST junto a los desarrolladores de back-end con Node.js y Express.',
         'Participé en ciclos de QA para validar la accesibilidad y el rendimiento de las aplicaciones.',
       ],
@@ -324,12 +324,12 @@ const es: CvContent = {
   ],
   education: [
     {
-      title: 'Técnico en Desarrollo de Aplicaciones Web',
+      title: 'Técnico Superior en Desarrollo de Aplicaciones Web',
       institution: 'IES Virgen de la Paz (2013-2014), IES Marqués de Comares (2016-2017)',
       period: '2013 - 2017',
     },
     {
-      title: 'Técnico en Sistemas Informáticos',
+      title: 'Técnico Superior en Administración de Sistemas Informáticos',
       institution: 'IES San Juan de la Cruz',
       period: '2009 - 2011',
     },
