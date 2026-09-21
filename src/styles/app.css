@@ -1,14 +1,74 @@
 @import "@fontsource-variable/inter";
 @import "tailwindcss";
 
+/*
+ * Themes, with no JavaScript required.
+ *
+ * `:root` carries the dark tokens, so dark is the fallback for everything. Light
+ * then applies in two independent situations, which is why its declarations are
+ * written twice: the operating system asks for light and nothing has overridden it,
+ * or the reader explicitly picked light and the inline script recorded that on
+ * `data-theme`.
+ *
+ * The `:not([data-theme])` guard is what makes the explicit choice win. Once the
+ * script sets `data-theme`, the media query stops matching and only an explicit
+ * `data-theme="light"` can paint light. The opposite case needs no block at all:
+ * `data-theme="dark"` is already what `:root` says.
+ *
+ * Values are load-bearing for scripts/contrast-check.mjs, which parses `:root` and
+ * `[data-theme="light"]` by selector and fails the build if a token goes missing.
+ */
 :root {
+  /* Tells the browser this theme is dark, so native UI (the <select> popup,
+     scrollbars, form controls, spell-check underlines) follows the theme
+     instead of being painted light on top of a dark page. */
+  color-scheme: dark;
+
   --bg: #0f172a;
   --surface: #1e293b;
-  --border: #475569;
+
+  /* --border must clear 3:1 against both --bg and --surface (WCAG 1.4.11), because
+     it is the only thing that makes the icon-only theme toggle, the language
+     links and the contact links look like controls. #64748b is the lightest slate
+     that passes in both themes: 3.75:1 / 3.07:1 here, 4.55:1 / 4.34:1 in light.
+     Guarded by scripts/contrast-check.mjs. */
+  --border: #64748b;
   --text: #e2e8f0;
   --text-muted: #94a3b8;
   --accent: #5eead4;
   --accent-dim: rgba(94, 234, 212, 0.1);
+  --on-accent: #0f172a;
+  --error: #f87171;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+
+    --bg: #f8fafc;
+    --surface: #f1f5f9;
+    --border: #64748b;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --accent: #0f766e;
+    --accent-dim: #ccfbf1;
+    --on-accent: #ffffff;
+    --error: #b91c1c;
+  }
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f8fafc;
+  --surface: #f1f5f9;
+  --border: #64748b;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --accent: #0f766e;
+  --accent-dim: #ccfbf1;
+  --on-accent: #ffffff;
+  --error: #b91c1c;
 }
 
 @theme inline {
@@ -19,6 +79,8 @@
   --color-muted: var(--text-muted);
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
+  --color-on-accent: var(--on-accent);
+  --color-error: var(--error);
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
@@ -32,11 +94,13 @@ html {
   }
 }
 
-/* Visible focus indicator, WCAG 2.4.7 / 1.4.11 */
+/* Visible focus indicator, WCAG 2.4.7 / 1.4.11.
+   No border-radius here on purpose: an outline already follows the element's own
+   corner radius, and setting it on this rule used to square off the rounded
+   badges for as long as they held focus. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 2px;
 }
 
 /* Skip link (WCAG 2.4.1): visually hidden until focused */
@@ -57,16 +121,81 @@ html {
   top: 1rem;
 }
 
-/* Scroll-reveal (progressive enhancement) */
-@media (prefers-reduced-motion: no-preference) {
-  html.js .reveal {
+/*
+ * Theme toggle.
+ *
+ * The button is hidden until `data-theme` exists on the root, and only the inline
+ * script sets that attribute. With JavaScript off the reader gets the operating
+ * system theme through the media query above and no button, rather than a control
+ * that would do nothing.
+ *
+ * Both icons ship in the markup and CSS picks one, so the state is visible without
+ * a script rewriting the DOM.
+ */
+.theme-toggle {
+  display: none;
+}
+[data-theme] .theme-toggle {
+  display: inline-flex;
+}
+.theme-icon-sun,
+.theme-icon-moon {
+  display: none;
+}
+[data-theme="dark"] .theme-icon-sun,
+[data-theme="light"] .theme-icon-moon {
+  display: block;
+}
+
+/*
+ * Scroll-reveal.
+ *
+ * Scroll-driven animations replace the IntersectionObserver this used to need: the
+ * element's position in the viewport is the timeline, so there is nothing to
+ * observe, nothing to unobserve, and no `js` class to gate the styles behind.
+ * `@supports` means an older browser simply renders the section at full opacity,
+ * which is the correct outcome rather than a degraded one.
+ */
+@keyframes reveal-in {
+  from {
     opacity: 0;
     transform: translateY(0.75rem);
-    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
   }
-  html.js .reveal.is-visible {
+  to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: reveal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 65%;
+    }
+  }
+}
+
+/*
+ * Tagline reveal.
+ *
+ * The typewriter this replaces animated text content, which needs JavaScript and
+ * leaves assistive tech reading a string that changes under its nose. `clip-path`
+ * animates the same letters that are already in the DOM: stepped like typing, but
+ * the text never stops being present, and with reduced motion it never moves.
+ */
+@keyframes tagline-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tagline-reveal {
+    display: inline-block;
+    animation: tagline-type 0.9s steps(20) 0.25s both;
   }
 }
 
@@ -83,5 +212,37 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .typewriter-caret {
     display: none;
+  }
+}
+
+/*
+ * Print.
+ * A CV gets printed, and both animations above hide content until it is scrolled
+ * into view or until a clip-path finishes — on paper there is no scroll and no
+ * frame, so the bottom of the page would come out blank. Print is also where the
+ * link targets have to appear, since the paper has no href.
+ *
+ * This block stays last in the file on purpose. Print emulation reports
+ * `prefers-reduced-motion: no-preference`, so the animation rules above match when
+ * printing too; at equal specificity only the later rule wins, and anything moved up
+ * here would let `clip-path: inset(0 100% 0 0)` print an empty tagline.
+ */
+@media print {
+  .reveal,
+  .tagline-reveal {
+    animation: none;
+    opacity: 1;
+    clip-path: none;
+  }
+  .typewriter-caret,
+  .theme-toggle,
+  .skip-link {
+    display: none;
+  }
+  main a[href^="http"]::after,
+  footer a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: #475569;
   }
 }

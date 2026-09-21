@@ -1,22 +1,4 @@
-export interface CvData {
-  name: string;
-  title: string;
-  location: string;
-  email: string;
-  linkedin: string;
-  tagline: string;
-  about: string[];
-  contact: ContactInfo;
-  skills: SkillCategory[];
-  experience: Experience[];
-  education: Education[];
-  languages: LanguageEntry[];
-}
-
-export interface ContactInfo {
-  intro: string;
-  cvHref: string;
-}
+import type { Locale } from '~/i18n/locale';
 
 export interface SkillCategory {
   name: string;
@@ -44,12 +26,29 @@ export interface LanguageEntry {
   level: string;
 }
 
-export const cv: CvData = {
+/** Locale-independent values (name and contact details are the same in every language). */
+export const cvStatic = {
   name: 'Jesús Sabroso Centella',
-  title: 'Senior Front-End & Mobile Engineer | Freelance',
   location: 'Málaga, Spain',
   email: 'jscentella@gmail.com',
   linkedin: 'linkedin.com/in/jesus-sabroso',
+  cvHref: '/cv.pdf',
+};
+
+/** Translatable content, per locale. */
+export interface CvContent {
+  title: string;
+  tagline: string;
+  about: string[];
+  contact: { intro: string };
+  skills: SkillCategory[];
+  experience: Experience[];
+  education: Education[];
+  languages: LanguageEntry[];
+}
+
+const en: CvContent = {
+  title: 'Senior Front-End & Mobile Engineer | Freelance',
   tagline: 'I build accessible, well-crafted experiences for the web and mobile.',
   about: [
     "Hi there! I'm Jesús, and I like building things. I'm a senior front-end and mobile engineer with more than a decade of experience crafting accessible, well-tested user interfaces for the web and mobile platforms. I take pride in the little details that separate a good product from an exceptional one, and I work best at the intersection of design and engineering, where thoughtful user experience meets clean, scalable code.",
@@ -58,7 +57,6 @@ export const cv: CvData = {
   ],
   contact: {
     intro: "I'm currently available for freelance projects and new opportunities. If you'd like to talk, my inbox is always open.",
-    cvHref: '/cv.pdf',
   },
   skills: [
     {
@@ -189,4 +187,160 @@ export const cv: CvData = {
     { language: 'Spanish', level: 'Native' },
     { language: 'English', level: 'Professional working proficiency' },
   ],
+};
+
+/**
+ * Spanish content. Mirrors `en` field for field: same array lengths, same order,
+ * same tech names. Product/company/institution names stay untranslated; only the
+ * `ONCE Group` official name is rendered as `Grupo ONCE`, which is how the
+ * organisation is referred to in Spanish.
+ *
+ * If you add a field to `en`, TypeScript will not catch a missing mirror here
+ * unless it is added to `CvContent`, so keep both objects side by side when editing.
+ */
+const es: CvContent = {
+  title: 'Ingeniero Front-End y Móvil Senior | Freelance',
+  tagline: 'Creo experiencias accesibles y bien cuidadas para web y móvil.',
+  about: [
+    '¡Hola! Soy Jesús y me gusta construir cosas. Soy ingeniero senior de front-end y móvil con más de una década creando interfaces de usuario accesibles y bien probadas para plataformas web y móviles. Cuido esos pequeños detalles que separan un buen producto de uno excepcional, y trabajo mejor en la intersección entre diseño e ingeniería, donde la experiencia de usuario bien pensada se encuentra con un código limpio y escalable.',
+    'Empecé en el back-end con Java y Oracle, lo que me dio una base sólida de cómo funcionan los productos de punta a punta y un sano respeto por las personas que hay detrás de las APIs. Desde entonces he publicado aplicaciones web empresariales con Angular, React y Next.js en One Beyond, The Cocktail y Grupo ONCE, donde desarrollé por primera vez aplicaciones accesibles conforme a WCAG, para personas con discapacidad visual o de otro tipo.',
+    'Hoy trabajo como freelance: llevo la arquitectura de front-end de principio a fin, con portales en React y TypeScript sobre TanStack, aplicaciones en React Native con Expo y una cultura de testing sólida con Cypress, Playwright y Jest. Me importan mucho la accesibilidad, el rendimiento y la calidad del código, y disfruto ayudando a otros desarrolladores a crecer.',
+  ],
+  contact: {
+    intro: 'Ahora mismo estoy disponible para proyectos freelance y nuevas oportunidades. Si quieres charlar, mi bandeja de entrada está siempre abierta.',
+  },
+  skills: [
+    {
+      name: 'Web',
+      items: [
+        'React',
+        'TanStack',
+        'Next.js',
+        'Angular',
+        'Vue.js',
+        'HTML',
+        'CSS',
+        'Tailwind CSS',
+        'SCSS',
+      ],
+    },
+    {
+      name: 'Móvil',
+      items: [
+        'React Native',
+        'Expo',
+        'NativeWind',
+        'Integraciones con Swift y Kotlin',
+        'EAS',
+      ],
+    },
+    {
+      name: 'Lenguajes y APIs',
+      items: ['TypeScript', 'JavaScript', 'APIs REST'],
+    },
+    {
+      name: 'Testing',
+      items: ['Cypress', 'Playwright', 'Jest', 'React Testing Library'],
+    },
+    {
+      name: 'Prácticas y herramientas',
+      items: [
+        'Git',
+        'Agile/Scrum',
+        'accesibilidad (WCAG)',
+        'revisión de código',
+        'mentoría',
+      ],
+    },
+    {
+      name: 'Otra experiencia',
+      items: ['Node.js', 'Express', 'NestJS', 'SQL', 'Oracle', 'Java/J2EE'],
+    },
+  ],
+  experience: [
+    {
+      role: 'Ingeniero Front-End y Móvil Freelance',
+      company: 'Autónomo',
+      period: 'Sep 2025 - Actualidad',
+      product: 'holiday.com (portal.holiday.com)',
+      details: [
+        'Desarrollo de la app móvil y del portal de usuario de holiday.com, con una migración en curso a XVmobile. Trabajé en un equipo de tres desarrolladores de front-end y tres de back-end.',
+        'Construí el portal de usuario desde cero como único ingeniero de front-end: diseñé su arquitectura y trabajé mano a mano con un desarrollador de back-end. Usé React, TypeScript, TanStack y Tailwind CSS, con un stack que eligimos entre los equipos.',
+        'Desarrollé funcionalidades en la app móvil existente con React Native, Expo, TypeScript y NativeWind; ayudé a entregar la app rediseñada en menos de un mes.',
+        'Colaboré en las integraciones nativas con Swift y Kotlin para iniciar sesión automáticamente al reabrir la app, a partir de la sesión anterior del usuario.',
+        'Implementé en solitario la gestión del modo sin conexión y migré los assets estáticos a una red de distribución de contenido (CDN).',
+        'Contribuí a llevar la cobertura de tests automatizados a cerca del 98% en las aplicaciones y participé en los despliegues móviles con el flujo de trabajo de EAS que ya existía.',
+      ],
+      tech: ['React', 'TypeScript', 'TanStack', 'Tailwind CSS', 'React Native', 'Expo', 'NativeWind', 'EAS'],
+    },
+    {
+      role: 'Ingeniero Front-End',
+      company: 'One Beyond',
+      period: 'Jun 2021 - Sep 2025',
+      location: 'Málaga, España',
+      details: [
+        'Diseñé e implementé soluciones de front-end escalables con Angular, React y Next.js, dando respuesta a requisitos empresariales y a las necesidades cambiantes del producto.',
+        'Participé en una plataforma de mensajería de marca blanca con identidad visual personalizable, desplegada en varios clientes.',
+        'Acompañé a otros desarrolladores mediante revisión de código, pair programming y orientación profesional, apoyando su crecimiento técnico y su progresión interna.',
+        'Desarrollé y mantuve tests automatizados con Cypress, Playwright, Jest y React Testing Library, en colaboración con los equipos de UX/UI, QA y back-end en entornos Agile.',
+      ],
+      tech: ['Angular', 'React', 'Next.js', 'TypeScript', 'Cypress', 'Playwright', 'Jest', 'React Testing Library'],
+    },
+    {
+      role: 'Desarrollador Front-End',
+      company: 'The Cocktail',
+      period: 'dic 2018 - jun 2021',
+      location: 'Málaga, España',
+      details: [
+        'Construí y optimicé aplicaciones web empresariales con React, Vue.js, Redux y Vuex.',
+        'Implementé interfaces accesibles y responsivas siguiendo las guías de diseño, e integré APIs REST.',
+        'Participé en la planificación de sprints, la estimación y las retrospectivas dentro de equipos Scrum Agile.',
+      ],
+      tech: ['React', 'Vue.js', 'Redux', 'Vuex', 'TypeScript', 'APIs REST'],
+    },
+    {
+      role: 'Desarrollador Front-End',
+      company: 'Grupo ONCE',
+      period: 'ago 2017 - dic 2018',
+      location: 'Málaga, España',
+      details: [
+        'Desarrollé aplicaciones accesibles conforme a los estándares WCAG, orientadas a personas con discapacidad visual o de otro tipo.',
+        'Construí interfaces responsivas con Angular 5, Bootstrap y SCSS, e integré APIs REST junto a los desarrolladores de back-end con Node.js y Express.',
+        'Participé en ciclos de QA para validar la accesibilidad y el rendimiento de las aplicaciones.',
+      ],
+      tech: ['Angular', 'Bootstrap', 'SCSS', 'Node.js', 'Express', 'WCAG'],
+    },
+    {
+      role: 'Desarrollador Back-End',
+      company: 'GlobalTMS',
+      period: '2014 - 2016',
+      location: 'Madrid, España',
+      details: [
+        'Desarrollé funcionalidades y resolví defectos en aplicaciones Java/J2EE con Oracle, WebSphere Application Server, Struts, Spring y Hibernate.',
+        'Administré bases de datos Oracle y SQL, cuidando la integridad de los datos, el rendimiento y la disponibilidad.',
+      ],
+      tech: ['Java', 'J2EE', 'Oracle', 'SQL', 'Spring', 'Hibernate'],
+    },
+  ],
+  education: [
+    {
+      title: 'Técnico Superior en Desarrollo de Aplicaciones Web',
+      institution: 'IES Virgen de la Paz (2013-2014), IES Marqués de Comares (2016-2017)',
+      period: '2013 - 2017',
+    },
+    {
+      title: 'Técnico Superior en Administración de Sistemas Informáticos',
+      institution: 'IES San Juan de la Cruz',
+      period: '2009 - 2011',
+    },
+  ],
+  languages: [
+    { language: 'Español', level: 'Nativo' },
+    { language: 'Inglés', level: 'Nivel profesional' },
+  ],
+};
+
+export const cv: Record<Locale, CvContent> = {
+  en,
+  es,
 };
