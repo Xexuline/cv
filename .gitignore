@@ -1,8 +1,7 @@
 # Dependencies
 node_modules/
 
-# Build output (TanStack Start / Nitro)
-.output/
+# Build output — this is what gets published to GitHub Pages
 dist/
 
 # Vite
