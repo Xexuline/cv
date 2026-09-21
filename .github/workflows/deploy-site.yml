@@ -1,0 +1,103 @@
+# Publishes the site to GitHub Pages.
+#
+# `npm run build` renders every page to static HTML in `dist/` — there is no
+# server and no client bundle behind the published site, so the artifact below is
+# byte-for-byte what a visitor receives.
+#
+# The base path is read from GitHub instead of being hardcoded here:
+# `configure-pages` reports where Pages actually mounts the repository, and the
+# build stamps it into every asset URL through `SITE_BASE`. That keeps
+# `vite.config.ts` the only place a default base is written down, and means a
+# move to a user site or a custom domain needs no change to this file.
+#
+# One-time setup, because a workflow cannot change it: Settings → Pages → Build
+# and deployment → Source must be "GitHub Actions".
+name: Deploy site to GitHub Pages
+
+on:
+  # Publish on merge to main.
+  push:
+    branches: [main]
+  # Run the same gates on pull requests without publishing, so main cannot
+  # inherit a build that 404s or fails the contrast audit.
+  pull_request:
+  # Redeploy main by hand (re-running a deploy needs no code change).
+  workflow_dispatch:
+
+# Serialise deploys: two concurrent Pages runs in one repository interfere.
+# Not cancelling means a published deploy is never abandoned half-way.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # configure-pages mints an OIDC token to read the Pages configuration.
+      id-token: write
+      pages: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the version the build is verified against locally.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type-check and audit colour contrast
+        run: npm run check
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build
+        run: npm run build
+        env:
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}
+
+      # The build already refuses to emit a page whose in-page anchors do not
+      # resolve, but it cannot know what a correct deployment looks like. These
+      # are the five files the published site needs, and the stylesheet URL is
+      # the one thing that silently breaks a project site under /<repo>/.
+      - name: Verify artifact
+        env:
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}
+        run: |
+          test -f dist/index.html
+          test -f dist/es/index.html
+          test -f dist/404.html
+          test -f dist/assets/site.css
+          test -f dist/.nojekyll
+          grep -q "href=\"${SITE_BASE}assets/site.css\"" dist/index.html
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    # main only. This also skips pull_request, whose ref is refs/pull/…/merge,
+    # and a workflow_dispatch started from a feature branch — neither should be
+    # able to publish.
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
