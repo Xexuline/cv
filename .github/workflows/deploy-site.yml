@@ -127,3 +127,99 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # Everything above proves the artifact is self-consistent. It cannot say
+      # Pages served it, and this repository's one production incident was
+      # precisely that gap: a correct `dist/` published under URLs that led
+      # nowhere, with every green check in agreement. This step is the only one
+      # that asks the live site.
+      #
+      # It therefore reads `page_url` and the published HTML, and never
+      # `SITE_BASE`: deriving an expectation from the value under test is what
+      # let the unstyled deploy pass, because the old gate matched the glued
+      # `/cvassets/site.css` it was supposed to reject.
+      - name: Smoke-check the published site
+        run: |
+          root='${{ steps.deployment.outputs.page_url }}'
+          case "$root" in
+            https://*) ;;
+            *) echo "::error::deploy-pages reported no https page_url (got: $root)"; exit 1 ;;
+          esac
+          base=${root%/}
+          # The stylesheet href in the page is a root-relative path, so it needs
+          # scheme + host back, and nothing else: appending it to $base would
+          # repeat the mount. Split on '://' first so the host boundary is the
+          # first '/' after the scheme, not the first '/' in the URL.
+          scheme=${root%%://*}
+          host=${root#*://}
+          host=${host%%/*}
+          origin="$scheme://$host"
+          body=$(mktemp)
+          failed=0
+
+          # No --location: a redirect means the deployment is not serving what
+          # it claims at the address it claims, and following it would hide
+          # exactly the mount mistake this step exists to catch.
+          #
+          # Retries carry a cache-busting query. Pages holds a URL for 600s, so
+          # a first attempt can legitimately read the previous deploy.
+          check() { # url expected_code [content_type_prefix]
+            url=$1 want=$2 want_type=${3-}
+            for attempt in 1 2 3 4 5 6; do
+              [ "$attempt" -gt 1 ] && url="${url%%\?*}?cb=$GITHUB_RUN_ID-$attempt"
+              got=$(curl -s -o "$body" --max-time 20 -w '%{http_code} %{content_type}' "$url") || true
+              code=${got%% *}
+              ctype=${got#* }
+              if [ "$code" = "$want" ]; then
+                case "$ctype" in
+                  "$want_type"*) echo "  ok   $want  $url"; return 0 ;;
+                esac
+              fi
+              [ "$attempt" = 6 ] || sleep 10
+            done
+            echo "::error::$url expected $want ${want_type:-any type} but answered '$got'"
+            return 1
+          }
+
+          echo "Checking $base"
+          check "$base/" 200 text/html || failed=$((failed + 1))
+
+          # The stylesheet URL is read out of the page Pages actually served,
+          # then requested on its own. A base that lost its trailing slash
+          # produces /cvassets/site.css, which has no /assets/ segment.
+          href=$(sed -n 's|.*<link rel="stylesheet" href="\([^"]*\)".*|\1|p' "$body" | head -n 1)
+          if [ -z "$href" ]; then
+            echo '::error::the published page links no stylesheet'
+            failed=$((failed + 1))
+          else
+            case "$href" in
+              */assets/site.css)
+                check "$origin$href" 200 text/css || failed=$((failed + 1))
+                ;;
+              *)
+                echo "::error::the published page links $href, outside any /assets/ segment"
+                failed=$((failed + 1))
+                ;;
+            esac
+          fi
+
+          check "$base/es/" 200 text/html || failed=$((failed + 1))
+          check "$base/og-image.png" 200 image/ || failed=$((failed + 1))
+
+          # Last, on purpose. A missing page 404s on a site that is not live at
+          # all, so this assertion only carries information once a real page and
+          # a real asset have answered 200 from the same mount. When they have
+          # not, reporting "ok 404" would print a pass beside a dead deployment.
+          if [ "$failed" = 0 ]; then
+            check "$base/no-such-page-$GITHUB_RUN_ID.html" 404 || failed=$((failed + 1))
+          else
+            echo '  skip 404  unknown-path check adds nothing once the checks above failed'
+          fi
+
+          rm -f "$body"
+          if [ "$failed" = 0 ]; then
+            echo "Published site verified at $base"
+          else
+            echo "::error::$failed check(s) disagreed — the artifact deployed, but Pages is not serving it as expected"
+          fi
+          exit "$failed"
