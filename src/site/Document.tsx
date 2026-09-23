@@ -1,4 +1,4 @@
-import { HTML_LANG, LOCALE_PATH, SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
+import { HTML_LANG, type Locale } from '~/i18n/locale';
 import { uiStrings } from '~/i18n/messages';
 import { THEME_COLOR_META } from '~/lib/theme';
 import type { SocialMeta } from '~/site/metadata';
@@ -26,17 +26,22 @@ const CSS_HREF = withBase('assets/site.css');
  * component decides where the tags sit and nothing about what they say. The same
  * applies to `canonical`: it is computed by `canonicalUrl` and only placed here.
  * It is omitted when null, which is how the `404.html` declines to name itself —
- * a miss that declares a canonical tells a crawler it is a copy of that URL.
+ * a miss that declares a canonical tells a crawler it is a copy of that URL. The
+ * `alternates` list is placed under the same rule: it is built by `alternateUrls`
+ * from the locale table, so this component never decides what the hreflang set is
+ * or how a URL is formed — it only says where each entry is declared.
  */
 export function Document({
   locale,
   social,
   canonical,
+  alternates,
   children,
 }: {
   locale: Locale;
   social: SocialMeta[];
   canonical?: string | null;
+  alternates: Array<{ locale: Locale; url: string }>;
   children: React.ReactNode;
 }) {
   const t = uiStrings[locale];
@@ -75,15 +80,15 @@ export function Document({
         ))}
         <link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
         {canonical ? <link rel="canonical" href={canonical} /> : null}
-        {/* Every page in the site is one locale and one path, so the alternates are
-            known at build time and can be listed from the table instead of a
-            per-route constant. */}
-        {SUPPORTED_LOCALES.map((alternate) => (
+        {/* One link per entry of the alternate set, in the order it arrives, so
+            the emitted hreflang set is exactly the one `alternateUrls` produced for
+            the sitemap. */}
+        {alternates.map((alternate) => (
           <link
-            key={alternate}
+            key={alternate.locale}
             rel="alternate"
-            hrefLang={alternate}
-            href={withBase(LOCALE_PATH[alternate])}
+            hrefLang={alternate.locale}
+            href={alternate.url}
           />
         ))}
         <link rel="stylesheet" href={CSS_HREF} />

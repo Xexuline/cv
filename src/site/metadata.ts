@@ -1,4 +1,4 @@
-import { SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
+import { LOCALE_PATH, SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
 import { uiStrings } from '~/i18n/messages';
 import { withBase } from '~/site/site';
 
@@ -85,6 +85,41 @@ export function canonicalUrl({
 
   requireOrigin(origin);
   return absoluteUrl(origin, pagePath);
+}
+
+/**
+ * Absolute alternate URL of every supported locale, in `SUPPORTED_LOCALES` order.
+ *
+ * Google requires hreflang alternates to be fully-qualified — its documentation
+ * lists `/foo` as incorrect — because a transport-less href is resolved against
+ * whichever host served the document, so a preview deployed on a staging host
+ * declares alternates that belong to that host instead of to this site.
+ *
+ * The pages and `sitemap.xml` take the same relationship from here so they cannot
+ * disagree: the sitemap's `xhtml:link` entries and `<link rel="alternate">` name
+ * one set of URLs, built once, and a crawler that compares them finds the same
+ * absolute address on both sides.
+ */
+export function alternateUrls({
+  origin,
+}: {
+  origin: string;
+}): Array<{ locale: Locale; url: string }> {
+  return SUPPORTED_LOCALES.map((locale) => {
+    const url = canonicalUrl({ origin, pagePath: LOCALE_PATH[locale] });
+    // `canonicalUrl` returns null only for a page with no canonical address, and
+    // no supported locale is such a page: `LOCALE_PATH` gives every entry of
+    // `SUPPORTED_LOCALES` a path. Reaching here means the two tables stopped
+    // agreeing, and emitting a short list would publish pages whose alternate set
+    // silently lost a language instead of failing the build that produced it.
+    if (url === null) {
+      throw new Error(
+        `Locale "${locale}" is in SUPPORTED_LOCALES but canonicalUrl gives it no URL; ` +
+          `LOCALE_PATH.${locale} must name the page it is published at.`,
+      );
+    }
+    return { locale, url };
+  });
 }
 
 /**

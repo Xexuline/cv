@@ -1,5 +1,4 @@
-import { LOCALE_PATH, SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
-import { canonicalUrl } from '~/site/metadata';
+import { alternateUrls, canonicalUrl } from '~/site/metadata';
 
 /**
  * One file the build emits that is not a page: `robots.txt` and `sitemap.xml`.
@@ -14,26 +13,6 @@ export interface DiscoveryFile {
 
 /** The file the `Sitemap:` line of `robots.txt` points at. */
 const SITEMAP_FILE_NAME = 'sitemap.xml';
-
-/**
- * Absolute URL of one supported locale, with the `null` case treated as a bug.
- *
- * `canonicalUrl` returns `null` for a page that has no canonical address — the
- * `404.html`. No supported locale is such a page: `LOCALE_PATH` gives every entry
- * of `SUPPORTED_LOCALES` a path, so `null` here means the two tables stopped
- * agreeing, and filtering it away would publish a sitemap with a locale missing
- * instead of failing the build that produced it.
- */
-function localeUrl(origin: string, locale: Locale): string {
-  const url = canonicalUrl({ origin, pagePath: LOCALE_PATH[locale] });
-  if (url === null) {
-    throw new Error(
-      `Locale "${locale}" is in SUPPORTED_LOCALES but canonicalUrl gives it no URL; ` +
-        `LOCALE_PATH.${locale} must name the page it is published at.`,
-    );
-  }
-  return url;
-}
 
 /**
  * `sitemap.xml` for the whole site.
@@ -62,14 +41,17 @@ function localeUrl(origin: string, locale: Locale): string {
  * path table in `locale.ts`.
  */
 function sitemapBody(origin: string): string {
-  const entries = SUPPORTED_LOCALES.map((locale) =>
+  // The same list the pages declare in their `<head>`, so the two cannot drift
+  // apart: `alternateUrls` is the only place a locale becomes a URL.
+  const urls = alternateUrls({ origin });
+  const entries = urls.map(({ url }) =>
     [
       '  <url>',
-      `    <loc>${localeUrl(origin, locale)}</loc>`,
-      ...SUPPORTED_LOCALES.map(
+      `    <loc>${url}</loc>`,
+      ...urls.map(
         (alternate) =>
-          `    <xhtml:link rel="alternate" hreflang="${alternate}" ` +
-          `href="${localeUrl(origin, alternate)}"/>`,
+          `    <xhtml:link rel="alternate" hreflang="${alternate.locale}" ` +
+          `href="${alternate.url}"/>`,
       ),
       '  </url>',
     ].join('\n'),
