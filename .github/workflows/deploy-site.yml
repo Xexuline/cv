@@ -67,7 +67,10 @@ jobs:
       # The build already refuses to emit a page whose in-page anchors do not
       # resolve, and it now refuses one whose root-relative URLs lead nowhere.
       # What only this step can say is what a *correct* deployment looks like:
-      # these are the six files the published site needs.
+      # these are the eight files the published site needs. robots.txt and
+      # sitemap.xml are listed here even though `npm run build` already refuses
+      # to write a sitemap that points at nothing — this list is what the
+      # artifact upload would silently truncate if publicDir handling changed.
       #
       # The stylesheet URL is read back out of the artifact instead of being
       # re-derived from the Pages base path. Grepping for the interpolated
@@ -85,6 +88,8 @@ jobs:
           test -f dist/assets/site.css
           test -f dist/.nojekyll
           test -f dist/og-image.png
+          test -f dist/robots.txt
+          test -f dist/sitemap.xml
           href=$(sed -n 's|.*<link rel="stylesheet" href="\([^"]*\)".*|\1|p' dist/index.html | head -n 1)
           if [ -z "$href" ]; then
             echo '::error::dist/index.html links no stylesheet'
@@ -205,6 +210,12 @@ jobs:
 
           check "$base/es/" 200 text/html || failed=$((failed + 1))
           check "$base/og-image.png" 200 image/ || failed=$((failed + 1))
+
+          # Checked as text/*, not as a specific media type: the content of both
+          # files is produced here, but their MIME type is chosen by the Pages
+          # front door, and a rebranded content type is not worth a red deploy.
+          check "$base/robots.txt" 200 text/ || failed=$((failed + 1))
+          check "$base/sitemap.xml" 200 text/ || failed=$((failed + 1))
 
           # Last, on purpose. A missing page 404s on a site that is not live at
           # all, so this assertion only carries information once a real page and
