@@ -52,6 +52,42 @@ function absoluteUrl(origin: string, path: string): string {
 }
 
 /**
+ * Reject anything that is not a bare https origin.
+ *
+ * One rule, called by both producers of an absolute page URL (`socialMeta` and
+ * `canonicalUrl`) so the two can never disagree about what origin is usable.
+ */
+function requireOrigin(origin: string): void {
+  if (!ORIGIN.test(origin)) {
+    throw new Error(
+      `SITE_ORIGIN must be an https origin without a path or trailing slash, got "${origin}".`,
+    );
+  }
+}
+
+/**
+ * The canonical URL of one page, or `null` when the page has none.
+ *
+ * This is the single source of the page's own address: `og:url` is taken from it,
+ * so the `<link rel="canonical">` and the social card cannot drift apart. It is
+ * `null` for the `404.html` (`pagePath: null`) — see `socialMeta`.
+ */
+export function canonicalUrl({
+  origin,
+  pagePath,
+}: {
+  origin: string;
+  pagePath?: string | null;
+}): string | null {
+  if (pagePath === null || pagePath === undefined) {
+    return null;
+  }
+
+  requireOrigin(origin);
+  return absoluteUrl(origin, pagePath);
+}
+
+/**
  * The `og:` and `twitter:` metadata of one page.
  *
  * `origin` is the deployment origin (`https://xexuline.github.io`), not a URL with
@@ -79,11 +115,7 @@ export function socialMeta({
   locale: Locale;
   pagePath?: string | null;
 }): SocialMeta[] {
-  if (!ORIGIN.test(origin)) {
-    throw new Error(
-      `SITE_ORIGIN must be an https origin without a path or trailing slash, got "${origin}".`,
-    );
-  }
+  requireOrigin(origin);
 
   const t = uiStrings[locale];
   const image = absoluteUrl(origin, OG_IMAGE);
@@ -94,8 +126,11 @@ export function socialMeta({
     { property: 'og:description', content: t.ogDescription },
   ];
 
-  if (pagePath !== null && pagePath !== undefined) {
-    meta.push({ property: 'og:url', content: absoluteUrl(origin, pagePath) });
+  // `canonicalUrl` is the page URL: emitting anything else here would let the
+  // social card and `<link rel="canonical">` name different pages.
+  const url = canonicalUrl({ origin, pagePath });
+  if (url !== null) {
+    meta.push({ property: 'og:url', content: url });
   }
 
   meta.push(

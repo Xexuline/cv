@@ -23,15 +23,20 @@ const CSS_HREF = withBase('assets/site.css');
  * `THEME_COLOR_META`, so they cannot drift from the palette.
  *
  * The social card arrives as `social`, already assembled by `socialMeta`, so this
- * component decides where the tags sit and nothing about what they say.
+ * component decides where the tags sit and nothing about what they say. The same
+ * applies to `canonical`: it is computed by `canonicalUrl` and only placed here.
+ * It is omitted when null, which is how the `404.html` declines to name itself —
+ * a miss that declares a canonical tells a crawler it is a copy of that URL.
  */
 export function Document({
   locale,
   social,
+  canonical,
   children,
 }: {
   locale: Locale;
   social: SocialMeta[];
+  canonical?: string | null;
   children: React.ReactNode;
 }) {
   const t = uiStrings[locale];
@@ -69,6 +74,7 @@ export function Document({
           />
         ))}
         <link rel="icon" type="image/svg+xml" href={withBase('favicon.svg')} />
+        {canonical ? <link rel="canonical" href={canonical} /> : null}
         {/* Every page in the site is one locale and one path, so the alternates are
             known at build time and can be listed from the table instead of a
             per-route constant. */}

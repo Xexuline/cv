@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LOCALE_PATH, SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
 import { Document } from '~/site/Document';
-import { socialMeta } from '~/site/metadata';
+import { canonicalUrl, socialMeta } from '~/site/metadata';
 import { NotFoundPage } from '~/site/NotFoundPage';
 import { Page } from '~/site/Page';
 
@@ -73,6 +73,11 @@ function assertAnchorsResolve(html: string, fileName: string): void {
  * image and nobody reports that back. A doubled slash is the other shape of the
  * same mistake: an origin that kept its trailing slash plus a base that has one
  * publishes `https://host//cv/og-image.png`, which resolves to nothing.
+ *
+ * `rel="canonical"` is asserted by the same rule because it is the stronger claim:
+ * it tells a crawler which URL owns the content, so a relative one fragments the
+ * site across every share of it. The `404.html` is asserted to carry none at all,
+ * since an unknown URL must not be told it is a duplicate of a known page.
  */
 function assertSocialUrlsAbsolute(html: string, fileName: string): void {
   for (const [, property, url] of html.matchAll(
@@ -90,6 +95,35 @@ function assertSocialUrlsAbsolute(html: string, fileName: string): void {
       );
     }
   }
+
+  const canonicals = Array.from(
+    html.matchAll(/<link\b[^>]*>/g),
+    (match) => {
+      const rel = /(?:^|\s)rel="([^"]*)"/.exec(match[0])?.[1] ?? '';
+      if (!rel.split(/\s+/).includes('canonical')) {
+        return undefined;
+      }
+      // A canonical with no href is a defect, not an absence: report it as the
+      // empty string so the https check below rejects it.
+      return /(?:^|\s)href="([^"]*)"/.exec(match[0])?.[1] ?? '';
+    },
+  ).filter((url): url is string => url !== undefined);
+
+  for (const url of canonicals) {
+    if (!url.startsWith('https://')) {
+      throw new Error(
+        `<Page ${fileName}> declares rel="canonical" href="${url}", which is not ` +
+          'an absolute https URL.',
+      );
+    }
+  }
+
+  if (fileName === '404.html' && canonicals.length > 0) {
+    throw new Error(
+      `<Page ${fileName}> declares rel="canonical" href="${canonicals[0]}"; a miss ` +
+        'has no canonical URL, and claiming one tells a crawler it is a duplicate.',
+    );
+  }
 }
 
 /**
@@ -100,8 +134,9 @@ function assertSocialUrlsAbsolute(html: string, fileName: string): void {
  * `index.html` inside them and the published URLs keep their trailing slash.
  *
  * `origin` is the deployment origin the pages are published under, and it reaches
- * `socialMeta` because a social card cannot name its own image relative to itself.
- * The `404.html` is rendered with `pagePath: null` — see `socialMeta`.
+ * `socialMeta` and `canonicalUrl` because a social card cannot name its own image
+ * relative to itself. The `404.html` is rendered with `pagePath: null` — see
+ * `socialMeta`.
  */
 export function renderPages({ origin }: { origin: string }): RenderedPage[] {
   const pages: RenderedPage[] = SUPPORTED_LOCALES.map((locale) => ({
@@ -110,6 +145,7 @@ export function renderPages({ origin }: { origin: string }): RenderedPage[] {
       <Document
         locale={locale}
         social={socialMeta({ origin, locale, pagePath: LOCALE_PATH[locale] })}
+        canonical={canonicalUrl({ origin, pagePath: LOCALE_PATH[locale] })}
       >
         <Page locale={locale} />
       </Document>,
@@ -126,6 +162,7 @@ export function renderPages({ origin }: { origin: string }): RenderedPage[] {
           locale: DEFAULT_404_LOCALE,
           pagePath: null,
         })}
+        canonical={canonicalUrl({ origin, pagePath: null })}
       >
         <NotFoundPage locale={DEFAULT_404_LOCALE} />
       </Document>,
