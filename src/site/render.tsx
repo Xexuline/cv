@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LOCALE_PATH, SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
 import { Document } from '~/site/Document';
+import { socialMeta } from '~/site/metadata';
 import { NotFoundPage } from '~/site/NotFoundPage';
 import { Page } from '~/site/Page';
 
@@ -65,17 +66,51 @@ function assertAnchorsResolve(html: string, fileName: string): void {
 }
 
 /**
+ * Fail the build when a page advertises itself with a URL nothing can resolve.
+ *
+ * `og:url` and `og:image` are fetched by another machine, from outside the page,
+ * so a relative value is not cosmetic — the card loses its canonical URL and its
+ * image and nobody reports that back. A doubled slash is the other shape of the
+ * same mistake: an origin that kept its trailing slash plus a base that has one
+ * publishes `https://host//cv/og-image.png`, which resolves to nothing.
+ */
+function assertSocialUrlsAbsolute(html: string, fileName: string): void {
+  for (const [, property, url] of html.matchAll(
+    /property="(og:url|og:image)" content="([^"]*)"/g,
+  )) {
+    if (!url.startsWith('https://')) {
+      throw new Error(
+        `<Page ${fileName}> advertises ${property}="${url}", which is not an absolute https URL.`,
+      );
+    }
+    if (url.slice('https://'.length).includes('//')) {
+      throw new Error(
+        `<Page ${fileName}> advertises ${property}="${url}": the origin and the ` +
+          'deployment base both contributed a slash.',
+      );
+    }
+  }
+}
+
+/**
  * Render every page of the site to a string.
  *
  * One page per locale, plus the `404.html` GitHub Pages serves for unknown paths.
  * `LOCALE_PATH.en` and `LOCALE_PATH.es` are directories, so both become
  * `index.html` inside them and the published URLs keep their trailing slash.
+ *
+ * `origin` is the deployment origin the pages are published under, and it reaches
+ * `socialMeta` because a social card cannot name its own image relative to itself.
+ * The `404.html` is rendered with `pagePath: null` — see `socialMeta`.
  */
-export function renderPages(): RenderedPage[] {
+export function renderPages({ origin }: { origin: string }): RenderedPage[] {
   const pages: RenderedPage[] = SUPPORTED_LOCALES.map((locale) => ({
     fileName: `${LOCALE_PATH[locale].slice(1)}index.html`,
     html: renderDocument(
-      <Document locale={locale}>
+      <Document
+        locale={locale}
+        social={socialMeta({ origin, locale, pagePath: LOCALE_PATH[locale] })}
+      >
         <Page locale={locale} />
       </Document>,
     ),
@@ -84,7 +119,14 @@ export function renderPages(): RenderedPage[] {
   pages.push({
     fileName: '404.html',
     html: renderDocument(
-      <Document locale={DEFAULT_404_LOCALE}>
+      <Document
+        locale={DEFAULT_404_LOCALE}
+        social={socialMeta({
+          origin,
+          locale: DEFAULT_404_LOCALE,
+          pagePath: null,
+        })}
+      >
         <NotFoundPage locale={DEFAULT_404_LOCALE} />
       </Document>,
     ),
@@ -92,6 +134,7 @@ export function renderPages(): RenderedPage[] {
 
   for (const page of pages) {
     assertAnchorsResolve(page.html, page.fileName);
+    assertSocialUrlsAbsolute(page.html, page.fileName);
   }
 
   return pages;

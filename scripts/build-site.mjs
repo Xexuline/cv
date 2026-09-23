@@ -23,6 +23,20 @@ const assetsDir = join(outDir, 'assets')
 /** The stylesheet name `src/site/Document.tsx` links to. */
 const CSS_NAME = 'site.css'
 
+/**
+ * Origin this repository is published under, unless `SITE_ORIGIN` says otherwise.
+ *
+ * An origin is not the Vite `base`. `SITE_BASE` says where *under* the origin the
+ * site is mounted (`/cv/` on a project site, `/` on a user site); the origin says
+ * which host the mount sits on. Only the prerender needs it, because a social
+ * crawler resolves `og:url` and `og:image` off-page — it has no document to
+ * resolve them against, so `/cv/og-image.png` is not a usable answer.
+ *
+ * A custom domain is therefore `SITE_ORIGIN=https://example.com SITE_BASE=/`; the
+ * two are joined, and validated, in `src/site/metadata.ts`.
+ */
+const DEFAULT_SITE_ORIGIN = 'https://xexuline.github.io'
+
 /** Tailwind + fonts + `public/`. `emptyOutDir` makes this the clean step. */
 async function buildStyles() {
   await build({
@@ -48,7 +62,7 @@ async function buildStyles() {
 }
 
 /** Render every page to a string and write it out. */
-async function buildPages() {
+async function buildPages(origin) {
   const server = await createServer({
     root,
     logLevel: 'warn',
@@ -59,7 +73,7 @@ async function buildPages() {
   let pages
   try {
     const module = await server.ssrLoadModule('/src/site/render.tsx')
-    pages = module.renderPages()
+    pages = module.renderPages({ origin })
   } finally {
     await server.close()
   }
@@ -155,9 +169,65 @@ async function verifyEmittedUrls(base) {
   }
 }
 
+/**
+ * The two social tags whose value is a URL must name a file this build wrote.
+ *
+ * `verifyEmittedUrls` above checks the root-relative URLs a browser resolves
+ * against the page; it cannot see these, because they are absolute on purpose —
+ * that is what makes them work off-page. Checking them against the artifact is
+ * what keeps the origin and the base from drifting apart: an origin that carries a
+ * path, or one that kept a trailing slash, produces an `og:image` that every
+ * unfurler silently drops, and the published page looks fine to anyone who opens it.
+ */
+async function verifySocialCardUrls(base) {
+  const failures = new Set()
+  const written = await readdir(outDir, { recursive: true, withFileTypes: true })
+
+  for (const entry of written) {
+    if (!entry.isFile() || !entry.name.endsWith('.html')) continue
+    const page = join(entry.parentPath ?? entry.path, entry.name)
+    for (const [, property, value] of (await readFile(page, 'utf8')).matchAll(
+      /property="(og:url|og:image)" content="([^"]*)"/g,
+    )) {
+      let pathname
+      try {
+        const url = new URL(value)
+        if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+          throw new Error(`${url.protocol} is not http(s)`)
+        }
+        pathname = url.pathname
+      } catch (cause) {
+        failures.add(
+          `${relative(root, page)} -> ${property}="${value}" (${cause.message})`,
+        )
+        continue
+      }
+      const served = servedFile(pathname, base)
+      if (served === undefined || !(await isFile(join(outDir, served)))) {
+        failures.add(
+          `${relative(root, page)} -> ${property}="${value}" is not served `
+            + `from dist/ under base ${base}`,
+        )
+      }
+    }
+  }
+
+  if (failures.size > 0) {
+    throw new Error(
+      `${failures.size} social-card URL(s) are not absolute or not served by this build:\n\n`
+        + `${[...failures].map((failure) => `  ${failure}`).join('\n')}\n\n`
+        + `A crawler fetches og:image without fetching the page, so it needs the full URL:\n`
+        + `the origin it resolves against comes from SITE_ORIGIN.`,
+    )
+  }
+}
+
 const started = Date.now()
 const renamedSheet = await buildStyles()
-const pages = await buildPages()
+// Trailing slashes are trimmed here rather than rejected: `SITE_BASE` already has
+// to be normalised for the same reason, and `socialMeta` validates the result.
+const origin = (process.env.SITE_ORIGIN ?? DEFAULT_SITE_ORIGIN).replace(/\/+$/, '')
+const pages = await buildPages(origin)
 
 // Resolved before the pages are checked: the URLs can only be interpreted
 // against the base that produced them.
@@ -165,6 +235,7 @@ const config = await resolveConfig({ root, configFile: join(root, 'vite.config.t
 const base = config.base ?? '/'
 
 await verifyEmittedUrls(base)
+await verifySocialCardUrls(base)
 
 console.log(
   `\n  ${pages.length} pages under base ${base} (stylesheet renamed from ${renamedSheet})\n`,

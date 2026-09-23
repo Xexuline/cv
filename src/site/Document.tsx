@@ -1,6 +1,7 @@
 import { HTML_LANG, LOCALE_PATH, SUPPORTED_LOCALES, type Locale } from '~/i18n/locale';
 import { uiStrings } from '~/i18n/messages';
 import { THEME_COLOR_META } from '~/lib/theme';
+import type { SocialMeta } from '~/site/metadata';
 import { withBase } from '~/site/site';
 import { THEME_SCRIPT } from '~/site/theme-script';
 
@@ -20,12 +21,17 @@ const CSS_HREF = withBase('assets/site.css');
  * `theme-color` is emitted twice, once per `prefers-color-scheme`, because the
  * browser paints its chrome before any script runs. Both values still come from
  * `THEME_COLOR_META`, so they cannot drift from the palette.
+ *
+ * The social card arrives as `social`, already assembled by `socialMeta`, so this
+ * component decides where the tags sit and nothing about what they say.
  */
 export function Document({
   locale,
+  social,
   children,
 }: {
   locale: Locale;
+  social: SocialMeta[];
   children: React.ReactNode;
 }) {
   const t = uiStrings[locale];
@@ -40,6 +46,15 @@ export function Document({
         />
         <title>{t.htmlTitle}</title>
         <meta name="description" content={t.description} />
+        {/* `property`, not `name`: the Open Graph and Twitter vocabularies are
+            property-prefixed, colon-suffixed variants included. */}
+        {social.map((meta) => (
+          <meta
+            key={meta.property}
+            property={meta.property}
+            content={meta.content}
+          />
+        ))}
         {(
           [
             ['light', THEME_COLOR_META.light],

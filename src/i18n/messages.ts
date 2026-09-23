@@ -3,6 +3,17 @@ import type { Locale } from './locale';
 export interface UiStrings {
   htmlTitle: string;
   description: string;
+  /**
+   * The card an unfurling site shows to somebody who never asked for the page.
+   *
+   * That audience and that length budget are not the ones `<title>` and
+   * `description` are written for, so the pair is authored here separately
+   * instead of being reused.
+   */
+  ogTitle: string;
+  ogDescription: string;
+  /** Alt text for `public/og-image.png`, which states the same claim as pixels. */
+  ogImageAlt: string;
   skipToContent: string;
   sections: {
     about: string;
@@ -53,6 +64,11 @@ export const uiStrings: Record<Locale, UiStrings> = {
     htmlTitle: 'Jesús Sabroso Centella - Portfolio',
     description:
       'Jesús Sabroso Centella - Senior Front-End & Mobile Engineer portfolio',
+    ogTitle: 'Jesús Sabroso | Senior Front-End & Mobile Engineer',
+    ogDescription:
+      'Senior front-end and mobile engineer building accessible products with React, React Native and TypeScript. Available for freelance work.',
+    ogImageAlt:
+      'Jesús Sabroso — Senior Front-End & Mobile Engineer. React, React Native, TypeScript, freelance.',
     skipToContent: 'Skip to content',
     sections: {
       about: 'About',
@@ -93,6 +109,11 @@ export const uiStrings: Record<Locale, UiStrings> = {
     htmlTitle: 'Jesús Sabroso Centella - Portafolio',
     description:
       'Portafolio de Jesús Sabroso Centella - Ingeniero Senior Front-End y Móvil',
+    ogTitle: 'Jesús Sabroso | Ingeniero Front-End y Móvil Senior',
+    ogDescription:
+      'Ingeniero front-end y móvil senior. Productos accesibles con React, React Native y TypeScript. Disponible para proyectos freelance.',
+    ogImageAlt:
+      'Jesús Sabroso — Ingeniero Front-End y Móvil Senior. React, React Native, TypeScript, freelance.',
     skipToContent: 'Saltar al contenido',
     sections: {
       about: 'Sobre mí',
